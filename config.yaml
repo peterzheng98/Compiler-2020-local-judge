@@ -1,0 +1,8 @@
+buildlimit: 1
+instlimit: 100000
+memlimit: 512
+path:
+  compiler: /Users/peterzheng/Documents/Projects/OldProject/Compiler/localJudge
+  dataset: /Users/peterzheng/Documents/Projects/OldProject/Compiler/localJudge/testcase
+stage: semantic
+timelimit: 15
