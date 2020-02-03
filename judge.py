@@ -36,7 +36,6 @@ def buildCompiler():
         print('{} == 1 ==[x]== Build failed with runtime error {}.{}'.format(color_red, identifier, color_none))
         exit(0)
     
-
 def runSemantic():
     judgeList = open(os.path.join(configuration['path']['dataset'], 'sema/judgelist.txt'), 'r', encoding='utf-8').readlines()
     semaPath = os.path.join(configuration['path']['dataset'], 'sema')
@@ -46,9 +45,11 @@ def runSemantic():
     totalNum = len(judgeList)
     acceptedNum = 0
     wrongNum = 0
-    acceptedList = []
-    wrongList = []
+    judgeResultList = []
     for case in judgeList:
+        judgeCaseResult = {}
+        judgeCaseResult['case'] = case
+        judgeCaseResult['stage'] = 'semantic'
         # load test case
         caseData = open(os.path.join(semaPath, case), 'r').readlines()
         caseData = [i.strip('\n') for i in caseData]
@@ -59,24 +60,36 @@ def runSemantic():
         expectedResult = metaDict['Verdict'] == 'Success'
         print(' == 2 ==[ ]==[ ]== Judge:{}.'.format(case), end='\r')
         dataArea = '\n'.join(caseData[metaIdx[1] + 1:])
-        process = subprocess.Popen(["sh", semanticPath], cwd=configuration['path']['compiler'], stdout=subprocess.PIPE, encoding='utf-8', shell=False)
+        process = subprocess.Popen(["sh", semanticPath], cwd=configuration['path']['compiler'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
         try:
+            process.stdin.write(dataArea.encode('utf-8'))
+            process.stdin.close()
             process.wait(configuration['timelimit'])
-            process.communicate(input=dataArea)
-            
+
+            stdout_result = process.stdout.readlines()
+            stderr_result = process.stderr.readlines()
+            stdout_result_str = '\n'.join([i.decode() for i in stdout_result])
+            stderr_result_str = '\n'.join([i.decode() for i in stderr_result])
+            judgeCaseResult['stdout'] = stdout_result_str
+            judgeCaseResult['stderr'] = stderr_result_str
+
             if process.returncode == 0 and expectedResult:
                 print('{} == 2 ==[ ]==[√]== Accepted:{}.{}'.format(color_green, case, color_none))
                 acceptedNum = acceptedNum + 1
+                judgeCaseResult['verdict'] = 'Accepted'
             elif process.returncode != 0 and (not expectedResult):
                 print('{} == 2 ==[ ]==[√]== Accepted:{}.{}'.format(color_green, case, color_none))
                 acceptedNum = acceptedNum + 1
+                judgeCaseResult['verdict'] = 'Accepted'
             else:
                 print('{} == 2 ==[ ]==[x]== Wrong Answer:{}.{}'.format(color_red, case, color_none))
                 wrongNum = wrongNum + 1
+                judgeCaseResult['verdict'] = 'Wrong Answer'
             pass
         except subprocess.TimeoutExpired:
             print('{} == 2 ==[ ]==[T]== Time Limit Exceeded:{}.{}'.format(color_yellow, case, color_none))
             wrongNum = wrongNum + 1
+            judgeCaseResult['verdict'] = 'Time Limit Exceeded'
             try:
                 process.kill()
             except Exception:
@@ -85,11 +98,14 @@ def runSemantic():
         except Exception as identifier:
             print('{} == 2 ==[ ]==[R]== Runtime Error:{}, error Message:{}.{}'.format(color_purple, case, identifier, color_none))
             wrongNum = wrongNum + 1
+            judgeCaseResult['verdict'] = 'Runtime Error'
             pass
+        judgeResultList.append(judgeCaseResult)
     if acceptedNum != totalNum:
         print('{} == 2 ==[x] Semantic Stage Summary: Passed: {} / {}, Ratio: {:.2f}%{}'.format(color_red, acceptedNum, totalNum, acceptedNum * 100.0 / totalNum, color_none))
     else:
         print('{} == 2 ==[√] Semantic Stage Summary: Passed: {} / {}, Ratio: {:.2f}% All passed!{}'.format(color_green, acceptedNum, totalNum, acceptedNum * 100.0 / totalNum, color_none))
+    yaml.safe_dump(judgeResultList, open('semantic_result.yaml', 'w', encoding='utf-8'))
     pass
 
 def runCodegen():
