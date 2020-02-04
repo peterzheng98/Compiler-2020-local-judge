@@ -68,8 +68,8 @@ def runSemantic():
 
             stdout_result = process.stdout.readlines()
             stderr_result = process.stderr.readlines()
-            stdout_result_str = '\n'.join([i.decode() for i in stdout_result])
-            stderr_result_str = '\n'.join([i.decode() for i in stderr_result])
+            stdout_result_str = ''.join([i.decode() for i in stdout_result])
+            stderr_result_str = ''.join([i.decode() for i in stderr_result])
             judgeCaseResult['stdout'] = stdout_result_str
             judgeCaseResult['stderr'] = stderr_result_str
 
