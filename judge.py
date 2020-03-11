@@ -128,7 +128,7 @@ def runCodegen():
         caseData = [i.strip('\n') for i in caseData]
         metaIdx = (caseData.index('/*'), caseData.index('*/'))
         metaArea = caseData[metaIdx[0] + 1: metaIdx[1]]
-        metaConfigArea = [i for i in metaArea if '===' not in i and 'output' not in i and 'Input' not in i and 'Output' not in i]
+        metaConfigArea = [i for i in metaArea if '===' not in i and 'output' not in i and 'Input' not in i and 'Output' not in i and ':' in i]
         metaConfigArea = [i.split(': ') for i in metaConfigArea]
         metaDict = {i[0]:i[1] for i in metaConfigArea}
 
