@@ -128,13 +128,19 @@ def runCodegen():
         caseData = [i.strip('\n') for i in caseData]
         metaIdx = (caseData.index('/*'), caseData.index('*/'))
         metaArea = caseData[metaIdx[0] + 1: metaIdx[1]]
-        metaConfigArea = [i for i in metaArea if '===' not in i and 'output' not in i and 'Input' not in i and 'Output' not in i and ':' in i]
+        metaConfigArea = []
+        inputOrOutput = False
+        for i in metaArea:
+            if '===' in i: inputOrOutput = not inputOrOutput
+            if inputOrOutput: continue
+            if '===' in i or 'output' in i or 'Input' in i or 'Output' in i or ':' not in i: continue
+            metaConfigArea.append(i)
         metaConfigArea = [i.split(': ') for i in metaConfigArea]
         metaDict = {i[0]:i[1] for i in metaConfigArea}
 
         newMetaArea = metaArea[metaArea.index('=== end ===') + 1:]
-        inputDataStr = ''.join(metaArea[metaArea.index('=== input ===') + 1 : metaArea.index('=== end ===')])
-        outputDataStr = ''.join(newMetaArea[newMetaArea.index('=== output ===') + 1 : newMetaArea.index('=== end ===')])
+        inputDataStr = '\n'.join(metaArea[metaArea.index('=== input ===') + 1 : metaArea.index('=== end ===')])
+        outputDataStr = '\n'.join(newMetaArea[newMetaArea.index('=== output ===') + 1 : newMetaArea.index('=== end ===')])
         expectedExitCode = int(metaDict['ExitCode'])
         instLimit = int(metaDict['InstLimit'])
         print(' == 3 ==[ ]==[ ]== Judge:{}.'.format(case), end='\r')
@@ -155,16 +161,29 @@ def runCodegen():
 
             path2ravel = configuration['path']['simulator']
             path2ravelExecutable = configuration['path']['simulator-executable']
-            open(os.path.join(path2ravel, 'test.s'), 'w').write(stdout_result_str)
-            open(os.path.join(path2ravel, 'test.in'), 'w').write(inputDataStr)
-            open(os.path.join(path2ravel, 'builtin.s'), 'w').write(''.join(open(configuration['path']['built-in'], 'r').readlines()))
-            process_sim = subprocess.Popen([path2ravelExecutable, "--oj-mode"], cwd=configuration['path']['simulator'], stdout=subprocess.PIPE, shell=False)
-            process_sim.wait(90)
-            report_list = [i.decode() for i in process_sim.stdout.readlines()]
-            key_list = [i.split(':') for i in report_list[:3]]
-            report_dict = {key_list[0]: int(key_list[1]) for i in key_list}
+            with open(os.path.join(path2ravel, 'test.s'), 'w') as f:
+                f.write(stdout_result_str)
+                f.close()
+            with open(os.path.join(path2ravel, 'test.in'), 'w') as f:
+                f.write(inputDataStr)
+                f.close()
+            with open(os.path.join(path2ravel, 'builtin.s'), 'w') as f:
+                f.write(''.join(open(configuration['path']['built-in'], 'r').readlines()))
+                f.close()
+            process_sim = subprocess.Popen([path2ravelExecutable, "--oj-mode"], cwd=configuration['path']['simulator'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False)
+            sim_returncode = process_sim.wait(90)
 
-            simulatorOutput = open(os.path.join(path2ravel, 'test.out'), 'r').readlines()
+            if sim_returncode != 0:
+                print('{} == 3 ==[ ]==[x]== Failed: Simulation Failure:{}, exit code: {}.{}'.format(color_red, case, sim_returncode, color_none))
+                wrongNum = wrongNum + 1
+                judgeCaseResult['verdict'] = 'Failed: Simulation Failure'
+                continue
+
+            report_list = [i.decode() for i in process_sim.stdout.readlines()]
+            key_list = [i.strip().split(': ') for i in report_list[1:4]]
+            report_dict = {i[0]: int(i[1]) for i in key_list}
+
+            simulatorOutput = '\n'.join(map(lambda x: x.strip(), open(os.path.join(path2ravel, 'test.out'), 'r').readlines()))
 
             outputMatch = simulatorOutput == outputDataStr
             exitcodeMatch = report_dict['exit code'] == expectedExitCode 
@@ -196,14 +215,19 @@ def runCodegen():
                 wrongNum = wrongNum + 1
                 judgeCaseResult['verdict'] = 'Failed:'
             pass
-        except subprocess.TimeoutExpired:
-            print('{} == 3 ==[ ]==[T]== Compile Time Limit Exceeded:{}.{}'.format(color_yellow, case, color_none))
-            wrongNum = wrongNum + 1
-            judgeCaseResult['verdict'] = 'Compile Time Limit Exceeded'
-            try:
-                process.kill()
-            except Exception:
-                pass
+        except subprocess.TimeoutExpired as identifier:
+            if identifier.cmd[0] == 'sh':
+                print('{} == 3 ==[ ]==[T]== Compile Time Limit Exceeded:{}.{}'.format(color_yellow, case, color_none))
+                wrongNum = wrongNum + 1
+                judgeCaseResult['verdict'] = 'Compile Time Limit Exceeded'
+                try:
+                    process.kill()
+                except Exception:
+                    pass
+            else:
+                print('{} == 3 ==[ ]==[x]== Failed: Simulation Time Limit Exceeded:{}.{}'.format(color_red, case, color_none))
+                wrongNum = wrongNum + 1
+                judgeCaseResult['verdict'] = 'Failed: Simulation Time Limit Exceeded'
             pass
         except Exception as identifier:
             print('{} == 3 ==[ ]==[R]== Runtime Error:{}, error Message:{}.{}'.format(color_purple, case, identifier, color_none))
