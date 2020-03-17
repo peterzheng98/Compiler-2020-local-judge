@@ -183,7 +183,7 @@ def runCodegen():
             key_list = [i.strip().split(': ') for i in report_list[1:4]]
             report_dict = {i[0]: int(i[1]) for i in key_list}
 
-            simulatorOutput = '\n'.join(map(lambda x: x.strip(), open(os.path.join(path2ravel, 'test.out'), 'r').readlines()))
+            simulatorOutput = '\n'.join(map(lambda x: x.strip('\n'), open(os.path.join(path2ravel, 'test.out'), 'r').readlines()))
 
             outputMatch = simulatorOutput == outputDataStr
             exitcodeMatch = report_dict['exit code'] == expectedExitCode 
