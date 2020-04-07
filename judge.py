@@ -11,6 +11,7 @@ color_red = "\033[0;31m"
 color_blue = "\033[0;34m"
 color_purple = "\033[0;35m"
 
+
 def buildCompiler():
     print(' == 1 ==[ ]== Build Your Compiler')
     buildScriptPath = os.path.join(configuration['path']['compiler'], 'build.sh')
@@ -35,7 +36,8 @@ def buildCompiler():
     except Exception as identifier:
         print('{} == 1 ==[x]== Build failed with runtime error {}.{}'.format(color_red, identifier, color_none))
         exit(0)
-    
+
+
 def runSemantic():
     judgeList = open(os.path.join(configuration['path']['dataset'], 'sema/judgelist.txt'), 'r', encoding='utf-8').readlines()
     semaPath = os.path.join(configuration['path']['dataset'], 'sema')
@@ -108,6 +110,7 @@ def runSemantic():
     yaml.safe_dump(judgeResultList, open('semantic_result.yaml', 'w', encoding='utf-8'))
     pass
 
+
 def runCodegen():
     judgeList = open(os.path.join(configuration['path']['dataset'], 'codegen/judgelist.txt'), 'r', encoding='utf-8').readlines()
     codegenPath = os.path.join(configuration['path']['dataset'], 'codegen')
@@ -140,7 +143,11 @@ def runCodegen():
 
         newMetaArea = metaArea[metaArea.index('=== end ===') + 1:]
         inputDataStr = '\n'.join(metaArea[metaArea.index('=== input ===') + 1 : metaArea.index('=== end ===')])
-        outputDataStr = '\n'.join(newMetaArea[newMetaArea.index('=== output ===') + 1 : newMetaArea.index('=== end ===')])
+        outputLines = newMetaArea[newMetaArea.index('=== output ===') + 1 : newMetaArea.index('=== end ===')]
+        if outputLines[-1] == '':
+            outputLines.pop(-1)
+        outputDataStr = '\n'.join(outputLines)
+
         expectedExitCode = int(metaDict['ExitCode'])
         instLimit = int(metaDict['InstLimit'])
         print(' == 3 ==[ ]==[ ]== Judge:{}.'.format(case), end='\r')
