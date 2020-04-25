@@ -144,8 +144,8 @@ def runCodegen():
         newMetaArea = metaArea[metaArea.index('=== end ===') + 1:]
         inputDataStr = '\n'.join(metaArea[metaArea.index('=== input ===') + 1 : metaArea.index('=== end ===')])
         outputLines = newMetaArea[newMetaArea.index('=== output ===') + 1 : newMetaArea.index('=== end ===')]
-        if outputLines[-1] == '':
-            outputLines.pop(-1)
+        #if outputLines[-1] == '':
+        #    outputLines.pop(-1)
         outputDataStr = '\n'.join(outputLines)
 
         expectedExitCode = int(metaDict['ExitCode'])
